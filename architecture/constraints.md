@@ -8,6 +8,7 @@
 
 ## Security
 - No secrets in repository state, examples, logs, or receipts.
+- Marketplace credentials must stay on the owner's local machine or a proper secret store; never commit or print API keys/HMAC secrets.
 - No arbitrary shell strings; trusted command checks use argv arrays.
 - Command execution is disabled by default and capped at 30 seconds.
 - Workspace paths must not escape their verification root.
@@ -20,6 +21,9 @@
 - A2 branch/PR/preview: logged, normally automatic.
 - A3 bid/claim/deliver/spend/publish/deploy: human approval required.
 - A4 destructive/sensitive/high-impact: explicit approval + independent verification.
+- Dealwork owner connection requires browser authorization.
+- Dealwork listing publication requires an explicit human action; no background auto-listing.
+- No automatic bids, claims, wallet actions, contract submissions, or escrow events in the market-test phase.
 
 ## Marketplace
 Dealwork is a distribution adapter. The core verification engine must not depend on Dealwork-specific state.
