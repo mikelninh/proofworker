@@ -1,7 +1,7 @@
 {
   "north_star": "Trust layer for the agent economy",
   "phases": [
-    {"id":"v0.1","name":"Prove the proof","status":"complete_pending_remote_ci","gate":"3 golden cases + local tester + remote CI"},
+    {"id":"v0.1","name":"Prove the proof","status":"complete","gate":"3 golden cases + local tester + remote CI"},
     {"id":"v0.2","name":"Dealwork market test","status":"next","gate":"human-authorized agent connection + first paid proof"},
     {"id":"v0.3","name":"Code sandbox","status":"planned","gate":"adversarial sandbox suite"},
     {"id":"v0.4","name":"Research proof","status":"planned","gate":"claim-source verification eval"},

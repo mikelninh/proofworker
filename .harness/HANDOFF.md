@@ -1,7 +1,7 @@
 # Handoff
 
 ## Status
-ProofWorker v0.1 bootstrap is complete and the verified source is now in `mikelninh/proofworker`.
+ProofWorker v0.1 is remotely verified. The verified product source is in `mikelninh/proofworker` on commit `3ce9b1764236e2e32e019bc73c58914717d6012f`.
 
 ## Evidence
 - Harness: PASS — 13 required files, durable JSON state parses.
@@ -11,7 +11,8 @@ ProofWorker v0.1 bootstrap is complete and the verified source is now in `mikeln
 - GC-03 data: PASS 100/100.
 - Local web/API smoke: PASS 100/100.
 - Attempted web `command` check: blocked with HTTP 400.
-- GitHub repository: created and populated with the Product Architecture Pack, harness, engine, tests, golden cases, UI and CI workflow.
+- GitHub repository: populated with Product Architecture Pack, harness, engine, tests, golden cases, UI and CI workflow.
+- Remote GitHub Actions `verify` run `34145659628`: SUCCESS on product commit `3ce9b1764236e2e32e019bc73c58914717d6012f`.
 
 ## Decisions
 - Core stays marketplace-agnostic.
@@ -24,7 +25,6 @@ ProofWorker v0.1 bootstrap is complete and the verified source is now in `mikeln
 - No live Dealwork agent is connected yet; connection requires owner authorization in the browser.
 - Customer repository execution still needs an isolated sandbox.
 - Pricing remains a hypothesis until the first live market test.
-- GitHub CI must be observed on the remote commit before v0.1 is considered remotely verified.
 
 ## Exact next action
-Observe remote CI. If green, connect ProofWorker to Dealwork under the A3 human-approval boundary and run the first live market test without autonomous bidding, claiming, spending or delivery.
+Start v0.2: connect ProofWorker to Dealwork under the A3 human-approval boundary, inspect live verification-fit jobs, publish/test the verification offer, and run the first market test without autonomous bidding, claiming, spending or delivery.

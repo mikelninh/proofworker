@@ -2,7 +2,7 @@
   "id": "PW-BOOTSTRAP-001",
   "goal": "Bootstrap ProofWorker v0.1 and prove the verification loop end to end.",
   "risk_class": "A2-shared",
-  "status": "remote_bootstrap_complete_pending_ci",
+  "status": "complete",
   "authoritative_sources": [
     "architecture/product-spec.md",
     "architecture/constraints.md",
@@ -36,7 +36,7 @@
     "execute untrusted remote code"
   ],
   "retry_budget": 3,
-  "next_owner": "verify remote CI, then human authorization for Dealwork connection",
+  "next_owner": "PW-DEALWORK-001 — human-authorized Dealwork market test",
   "evidence": {
     "harness": "PASS — 13 required files; JSON state parses",
     "tests": "PASS — 6/6 unittest cases",
@@ -47,6 +47,8 @@
     ],
     "web_smoke": "PASS 100/100",
     "web_command_injection": "BLOCKED HTTP 400",
-    "github_repo": "mikelninh/proofworker"
+    "github_repo": "mikelninh/proofworker",
+    "verified_product_commit": "3ce9b1764236e2e32e019bc73c58914717d6012f",
+    "remote_ci": "SUCCESS — GitHub Actions verify run 34145659628"
   }
 }
