@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ProofWorker — AI work, independently verified</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div class="eyebrow">PROOFWORKER / v0.1</div>
+      <h1>AI work,<br><em>independently verified.</em></h1>
+      <p>Task → acceptance criteria → deliverable → evidence-backed verdict.</p>
+    </header>
+
+    <section class="grid">
+      <div class="panel input-panel">
+        <div class="panel-head">
+          <span>Verification contract</span>
+          <div class="samples">
+            <button data-sample="pass">PASS demo</button>
+            <button data-sample="fail">FAIL demo</button>
+            <button data-sample="unknown">UNKNOWN demo</button>
+          </div>
+        </div>
+        <textarea id="spec" spellcheck="false"></textarea>
+        <div class="actions">
+          <span class="hint">Web mode never executes submitted code.</span>
+          <button id="run" class="primary">Run proof</button>
+        </div>
+      </div>
+
+      <div class="panel output-panel">
+        <div class="panel-head"><span>Proof report</span><span id="state" class="state">READY</span></div>
+        <div id="empty" class="empty">Run a verification contract to see what can actually be proven.</div>
+        <div id="report" hidden>
+          <div class="score-row">
+            <div><div class="label">VERDICT</div><div id="verdict" class="verdict"></div></div>
+            <div class="score"><span id="score">0</span><small>/100</small></div>
+          </div>
+          <div id="criteria" class="criteria"></div>
+          <div class="policy">Unknown evidence is never upgraded to PASS.</div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <span>SPECIFY → PROVE → SHIP → WATCH</span>
+      <span>Evidence before confidence.</span>
+    </footer>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

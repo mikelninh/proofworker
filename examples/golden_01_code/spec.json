@@ -1,0 +1,10 @@
+{
+  "id": "golden-01-code-pass",
+  "task": "Deliver a Python greeting function with a passing automated test.",
+  "workspace": "workspace",
+  "criteria": [
+    {"id":"C1","text":"Implementation file exists and exposes greet()","checks":[{"type":"file_exists","path":"hello.py"},{"type":"file_contains","path":"hello.py","contains":"def greet"}]},
+    {"id":"C2","text":"Automated test exists","checks":[{"type":"file_exists","path":"tests/test_hello.py"}]},
+    {"id":"C3","text":"Automated test suite passes","checks":[{"type":"command","argv":["python","-m","unittest","discover","-s","tests","-v"],"expect_exit":0,"timeout_seconds":10}]}
+  ]
+}

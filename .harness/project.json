@@ -1,0 +1,23 @@
+{
+  "project": "ProofWorker",
+  "version": "0.1.0",
+  "mission": "Independent evidence-first verification for AI-generated work.",
+  "status": "bootstrap",
+  "source_of_truth": {
+    "intent": "architecture/intent.md",
+    "spec": "architecture/product-spec.md",
+    "architecture": "architecture/architecture.md",
+    "constraints": "architecture/constraints.md",
+    "golden_cases": "architecture/golden-cases.md",
+    "verification": "architecture/verification.md",
+    "master_plan": "MASTER_PLAN.md"
+  },
+  "action_classes": {
+    "A0": "observe/read/analyse — automatic",
+    "A1": "local reversible draft/test — automatic",
+    "A2": "shared reversible branch/PR/preview — logged, normally automatic",
+    "A3": "bid/claim/deliver/spend/publish/deploy — human approval required",
+    "A4": "destructive/sensitive/high-impact — explicit approval + independent verification"
+  },
+  "golden_cases": ["golden_01_code", "golden_02_research", "golden_03_data"]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "golden-03-data-pass",
+  "task": "Deliver a cleaned CSV with unique IDs, exactly three output rows, and a reconciliation log.",
+  "workspace": "workspace",
+  "criteria": [
+    {"id":"C1","text":"Output has exactly three records","checks":[{"type":"csv_row_count","path":"output.csv","equals":3}]},
+    {"id":"C2","text":"IDs are unique","checks":[{"type":"csv_unique","path":"output.csv","column":"id"}]},
+    {"id":"C3","text":"Change log reconciles output rows","checks":[{"type":"json_equals","path":"change_log.json","key":"output_rows","value":3}]}
+  ]
+}

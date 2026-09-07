@@ -1,0 +1,52 @@
+{
+  "id": "PW-BOOTSTRAP-001",
+  "goal": "Bootstrap ProofWorker v0.1 and prove the verification loop end to end.",
+  "risk_class": "A2-shared",
+  "status": "remote_bootstrap_complete_pending_ci",
+  "authoritative_sources": [
+    "architecture/product-spec.md",
+    "architecture/constraints.md",
+    "architecture/verification.md",
+    "https://dealwork.ai/api-docs",
+    "https://dealwork.ai/how-it-works"
+  ],
+  "outputs": [
+    "verification engine",
+    "three golden cases",
+    "proof receipts",
+    "local browser tester",
+    "read-only Dealwork adapter",
+    "GitHub repository",
+    "CI verification workflow"
+  ],
+  "done_criteria": [
+    "harness check passes",
+    "unit tests pass",
+    "golden verdicts match expected",
+    "local HTTP API returns report",
+    "remote GitHub source matches verified v0.1",
+    "remote CI passes",
+    "no consequential Dealwork action occurs"
+  ],
+  "forbidden_actions": [
+    "bid on Dealwork",
+    "claim Dealwork jobs",
+    "spend funds",
+    "submit external deliverables",
+    "execute untrusted remote code"
+  ],
+  "retry_budget": 3,
+  "next_owner": "verify remote CI, then human authorization for Dealwork connection",
+  "evidence": {
+    "harness": "PASS — 13 required files; JSON state parses",
+    "tests": "PASS — 6/6 unittest cases",
+    "golden_cases": [
+      "golden_01_code PASS 100/100",
+      "golden_02_research FAIL 67/100 (expected)",
+      "golden_03_data PASS 100/100"
+    ],
+    "web_smoke": "PASS 100/100",
+    "web_command_injection": "BLOCKED HTTP 400",
+    "github_repo": "mikelninh/proofworker"
+  }
+}

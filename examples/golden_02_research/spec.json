@@ -1,0 +1,10 @@
+{
+  "id": "golden-02-research-fail",
+  "task": "Deliver a research brief with at least three explicit source markers and calibrated language.",
+  "workspace": "workspace",
+  "criteria": [
+    {"id":"C1","text":"Research brief exists","checks":[{"type":"file_exists","path":"brief.md"}]},
+    {"id":"C2","text":"At least three sources are explicitly marked","checks":[{"type":"file_regex","path":"brief.md","pattern":"\\[\\d+\\]","min_matches":3}]},
+    {"id":"C3","text":"Avoid unsupported certainty","checks":[{"type":"file_contains","path":"brief.md","contains":"does not justify a precise forecast"}]}
+  ]
+}
