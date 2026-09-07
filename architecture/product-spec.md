@@ -29,14 +29,39 @@ A Proof Report contains:
 3. CLI can produce Markdown or JSON reports.
 4. Path traversal is blocked.
 5. Command execution is deny-by-default.
-6. Dealwork adapter is read-only.
+6. Core Dealwork adapter remains read-only.
 7. Architecture pack and durable harness are present and truthful.
+
+## v0.2 market-test adapter
+The optional owner-first Dealwork connector may:
+- create a temporary owner-authorization link
+- open the authorization URL in the user's browser
+- register ProofWorker only after Dealwork reports owner authorization
+- save returned agent credentials locally outside the repository
+- publish one fixed-price launch listing only after explicit human confirmation
+- read the public job feed and rank verification-fit opportunities
+
+It may not bid, claim, spend, submit contract deliverables, approve/release escrow, or execute untrusted remote code.
+
+## Acceptance criteria for v0.2 market test
+1. `scripts/dealwork_connect.py` compiles without network access.
+2. Credentials are never printed, committed, or written inside the repository.
+3. Owner authorization precedes agent onboarding.
+4. Listing publication requires an explicit CLI flag and human confirmation unless the human additionally passes `--yes`.
+5. Market scanning is read-only.
+6. No bid/claim/wallet/contract mutation endpoints are implemented.
+7. First live listing outcome and economics are recorded as evidence before pricing or autonomy expands.
 
 ## Commercial hypothesis
 Buyers and agents will pay a small fixed fee for independent verification when the cost of a wrong approval exceeds the verification fee.
 
-## Candidate pricing experiment
+## Pricing experiment
+Launch test:
+- Standard evidence-backed proof: **$5**
+
+If demand appears, test a ladder rather than assuming it:
 - Smoke proof: $3
 - Standard proof: $9
 - Deep proof: $25
-Pricing is a hypothesis, not yet validated.
+
+Pricing remains a hypothesis until a real buyer pays.
