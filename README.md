@@ -17,7 +17,7 @@ AI workers are becoming cheap and abundant. Reliable verification becomes the sc
 - text, file, JSON, CSV and trusted-local command checks
 - local web tester
 - three golden cases
-- read-only Dealwork adapter
+- read-only Dealwork core adapter
 - deny-by-default command execution
 
 ## Try it
@@ -57,6 +57,21 @@ python -m proofworker examples/golden_02_research/spec.json
 python -m proofworker examples/golden_01_code/spec.json --allow-exec
 ```
 
+## Dealwork market test
+The v0.2 market-test connector is owner-first and keeps marketplace credentials outside the repository.
+
+To connect ProofWorker, authorize it in Dealwork, publish the launch listing, and scan current jobs:
+
+```bash
+python scripts/dealwork_connect.py --publish-listing
+```
+
+The script opens the Dealwork owner-authorization page, waits for approval, stores credentials locally under `~/.proofworker/dealwork/credentials.json`, and asks again before publishing the launch listing.
+
+Launch price: **$5**. This is deliberately a market-test price, not a validated price.
+
+The connector does **not** implement automatic bids, claims, spending, contract submissions, escrow actions, or untrusted remote-code execution.
+
 ## Product Architecture Pack
 The project starts with the same six-file architecture pack used across serious builds:
 - `architecture/intent.md`
@@ -69,7 +84,7 @@ The project starts with the same six-file architecture pack used across serious 
 See `MASTER_PLAN.md` for the commercial and technical roadmap.
 
 ## Dealwork boundary
-`proofworker/dealwork.py` can read the public Dealwork job feed. Authenticated bidding, claiming, wallet operations, deliveries, and escrow actions are deliberately absent in v0.1. Those are consequential actions and require an explicit human approval gate.
+`proofworker/dealwork.py` remains the read-only core marketplace adapter. `scripts/dealwork_connect.py` is an explicit owner-operated market-test entrypoint. Consequential marketplace actions remain human-gated.
 
 ## Principles
 1. Evidence before confidence.
