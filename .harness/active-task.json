@@ -1,54 +1,55 @@
 {
-  "id": "PW-BOOTSTRAP-001",
-  "goal": "Bootstrap ProofWorker v0.1 and prove the verification loop end to end.",
-  "risk_class": "A2-shared",
-  "status": "complete",
+  "id": "PW-REVENUE-001",
+  "goal": "Turn ProofWorker into a bounded revenue-seeking operator that discovers, ranks, prepares and human-confirms small paid technical work, then records real economics.",
+  "risk_class": "A3-human-gated",
+  "status": "active",
   "authoritative_sources": [
     "architecture/product-spec.md",
     "architecture/constraints.md",
     "architecture/verification.md",
     "https://dealwork.ai/api-docs",
-    "https://dealwork.ai/how-it-works"
+    "https://dealwork.ai/how-it-works",
+    "https://dealwork.ai/terms"
   ],
   "outputs": [
-    "verification engine",
-    "three golden cases",
-    "proof receipts",
-    "local browser tester",
-    "read-only Dealwork adapter",
-    "GitHub repository",
-    "CI verification workflow"
+    "live Dealwork agent",
+    "$5 verification listing",
+    "bounded revenue operator",
+    "market noise and risk filters",
+    "EV-ranked opportunity receipts",
+    "human-confirmed bid path",
+    "status/earnings reader"
   ],
   "done_criteria": [
-    "harness check passes",
-    "unit tests pass",
-    "golden verdicts match expected",
-    "local HTTP API returns report",
-    "remote GitHub source matches verified v0.1",
+    "revenue operator self-test passes",
     "remote CI passes",
-    "no consequential Dealwork action occurs"
+    "20+ live opportunities are scanned",
+    "top opportunities are ranked using job detail and competition signals",
+    "at least one human-approved live bid or claim attempt is made",
+    "first accepted work is recorded separately from first earned revenue",
+    "first paid win is recorded with evidence and economics",
+    "three clean paid wins exist before autonomy expands"
   ],
   "forbidden_actions": [
-    "bid on Dealwork",
-    "claim Dealwork jobs",
-    "spend funds",
-    "submit external deliverables",
-    "execute untrusted remote code"
+    "unattended Dealwork bids",
+    "automatic Dealwork claims",
+    "automatic paid-contract acceptance",
+    "wallet spending or transfers",
+    "automatic paid deliverable submission",
+    "escrow approval or release",
+    "execute untrusted remote code outside an approved sandbox",
+    "security-sensitive work involving phishing, credential theft, malware, auth bypass, exfiltration or live-target attacks"
   ],
   "retry_budget": 3,
-  "next_owner": "PW-DEALWORK-001 — human-authorized Dealwork market test",
+  "next_owner": "Run bounded live scan and approve only genuinely qualified first bids",
   "evidence": {
-    "harness": "PASS — 13 required files; JSON state parses",
-    "tests": "PASS — 6/6 unittest cases",
-    "golden_cases": [
-      "golden_01_code PASS 100/100",
-      "golden_02_research FAIL 67/100 (expected)",
-      "golden_03_data PASS 100/100"
-    ],
-    "web_smoke": "PASS 100/100",
-    "web_command_injection": "BLOCKED HTTP 400",
     "github_repo": "mikelninh/proofworker",
-    "verified_product_commit": "3ce9b1764236e2e32e019bc73c58914717d6012f",
-    "remote_ci": "SUCCESS — GitHub Actions verify run 34145659628"
+    "dealwork_agent_id": "6b8bdc5e-ddc1-4066-b350-fca23dc87af8",
+    "dealwork_listing_id": "8bcfd98d-a487-4976-97a1-31feb0c2f7a9",
+    "launch_price_usd": 5,
+    "launch_receipt": ".harness/receipts/2026-09-08_dealwork_launch.md",
+    "live_candidates_observed": 8,
+    "earned_revenue_usd_evidenced": 0,
+    "cash_received_usd_evidenced": 0
   }
 }
