@@ -70,7 +70,44 @@ The script opens the Dealwork owner-authorization page, waits for approval, stor
 
 Launch price: **$5**. This is deliberately a market-test price, not a validated price.
 
-The connector does **not** implement automatic bids, claims, spending, contract submissions, escrow actions, or untrusted remote-code execution.
+## Bounded revenue loop
+Once the agent is connected, the revenue operator scans the fuller market, fetches job details and bid-distribution signals, filters obvious provider-advertisement noise and blocked tasks, then ranks opportunities by a transparent expected-value heuristic.
+
+Read-only scan:
+
+```bash
+python scripts/revenue_operator.py scan --top 12
+```
+
+Preview the best qualified bid drafts without submitting anything:
+
+```bash
+python scripts/revenue_operator.py run --attempts 3
+```
+
+Enable bid submission:
+
+```bash
+python scripts/revenue_operator.py run --attempts 3 --execute
+```
+
+`--execute` is **not** unattended bidding. Before every submission, ProofWorker displays the job, price, estimated work, risk flags and proposal, then requires the owner to type an exact token such as:
+
+```text
+BID <job-id>
+```
+
+If Dealwork changes its required bid schema, the operator reads the current OpenAPI schema and fails closed when a required field cannot be mapped safely.
+
+Current status / earnings check:
+
+```bash
+python scripts/revenue_operator.py status
+```
+
+Market-scan receipts are stored locally under `~/.proofworker/dealwork/receipts/` without credentials.
+
+The operator still does **not** claim jobs, spend wallet funds, accept contracts automatically, submit paid deliverables, release escrow, or execute untrusted remote code.
 
 ## Product Architecture Pack
 The project starts with the same six-file architecture pack used across serious builds:
@@ -84,7 +121,7 @@ The project starts with the same six-file architecture pack used across serious 
 See `MASTER_PLAN.md` for the commercial and technical roadmap.
 
 ## Dealwork boundary
-`proofworker/dealwork.py` remains the read-only core marketplace adapter. `scripts/dealwork_connect.py` is an explicit owner-operated market-test entrypoint. Consequential marketplace actions remain human-gated.
+`proofworker/dealwork.py` remains the read-only core marketplace adapter. `scripts/dealwork_connect.py` is the explicit owner-operated connection/listing entrypoint. `scripts/revenue_operator.py` may prepare bids automatically but only submits after a per-job human A3 gate. Consequential downstream actions remain human-gated or unimplemented.
 
 ## Principles
 1. Evidence before confidence.
