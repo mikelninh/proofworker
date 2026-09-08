@@ -70,29 +70,33 @@ _BUYER_REQUEST_MARKERS = (
     "need this analysed",
 )
 
-_CONCRETE_OBJECT_MARKERS = (
-    "repository",
-    "repo",
-    "github",
-    "codebase",
-    "existing app",
-    "existing code",
-    "api endpoint",
-    "this api",
-    "this file",
-    "provided file",
-    "attached file",
-    "dataset",
-    "this dataset",
-    "provided data",
-    "csv",
-    "spreadsheet",
-    "document",
-    "url",
-    "issue #",
-    "bug",
-    "fixture",
-    "test suite",
+_CONCRETE_OBJECT_PATTERNS = tuple(
+    re.compile(pattern, re.IGNORECASE)
+    for pattern in (
+        r"\brepository\b",
+        r"\brepo\b",
+        r"\bgithub\b",
+        r"\bcodebase\b",
+        r"\bexisting app\b",
+        r"\bexisting code\b",
+        r"\bapi endpoint\b",
+        r"\bthis api\b",
+        r"\bthis file\b",
+        r"\bprovided file\b",
+        r"\battached file\b",
+        r"\bdataset\b",
+        r"\bthis dataset\b",
+        r"\bprovided data\b",
+        r"\bcsv\b",
+        r"\bspreadsheet\b",
+        r"\bsource document\b",
+        r"\bthis document\b",
+        r"\burl\b",
+        r"\bissue\s*#\d+",
+        r"\bbug\b",
+        r"\bfixture\b",
+        r"\btest suite\b",
+    )
 )
 
 _IMPERATIVE_TITLE = re.compile(
@@ -106,15 +110,23 @@ def _combined(job: dict) -> str:
     return f"{job.get('title', '')} {job.get('description', '')}".lower()
 
 
+def _positive_buyer_request(job: dict) -> bool:
+    text = _combined(job)
+    if any(marker in text for marker in _BUYER_REQUEST_MARKERS):
+        return True
+
+    title = str(job.get("title", ""))
+    if _IMPERATIVE_TITLE.search(title) and not any(marker in text for marker in _SELLER_MARKERS):
+        return True
+    return False
+
+
 def _seller_evidence(job: dict) -> bool:
     text = _combined(job)
-    hits = sum(marker in text for marker in _SELLER_MARKERS)
-    if hits >= 1:
+    if any(marker in text for marker in _SELLER_MARKERS):
         return True
 
     title = str(job.get("title", "")).lower()
-    # Menu-style productized work with a price range is supply unless the body
-    # contains a direct buyer request.
     price_range = bool(re.search(r"\$\s*\d+\s*[-–—]\s*\$?\s*\d+", title))
     service_nouns = sum(
         term in title
@@ -129,28 +141,13 @@ def _seller_evidence(job: dict) -> bool:
     return False
 
 
-def _positive_buyer_request(job: dict) -> bool:
-    text = _combined(job)
-    if any(marker in text for marker in _BUYER_REQUEST_MARKERS):
-        return True
-
-    # Imperative task titles are useful weak-positive evidence, but only when the
-    # body does not describe the poster's own service catalogue.
-    title = str(job.get("title", ""))
-    if _IMPERATIVE_TITLE.search(title) and not any(marker in text for marker in _SELLER_MARKERS):
-        return True
-    return False
-
-
 def _positive_concrete_scope(job: dict) -> bool:
-    text = f" {_combined(job)} "
-    concrete_object = any(marker in text for marker in _CONCRETE_OBJECT_MARKERS)
+    text = _combined(job)
+    concrete_object = any(pattern.search(text) for pattern in _CONCRETE_OBJECT_PATTERNS)
     structured = any(
         job.get(key)
         for key in ("acceptanceCriteria", "acceptance_criteria", "deliverables", "requirements")
     )
-    # Structured criteria are supporting evidence only; they cannot create buyer
-    # intent on their own.
     return concrete_object or bool(structured and _positive_buyer_request(job))
 
 
@@ -181,8 +178,6 @@ def _score_v3(job: dict, distribution: dict | None = None) -> dict:
         if "concrete-task-object-missing" not in flags:
             flags.append("concrete-task-object-missing")
 
-    # Never live-bid a tiny task merely because it is easy; keep sub-$5 work for
-    # manual review/reputation experiments.
     if float(result.get("budget", 0.0)) < 5.0 and result.get("action") == "QUALIFY":
         result["action"] = "REVIEW"
         if "sub-$5-manual-review" not in flags:
@@ -196,16 +191,26 @@ def _score_v3(job: dict, distribution: dict | None = None) -> dict:
 
 
 ro.score_job = _score_v3
-
-# v1/v2 evidence preview resolves these module globals. Patch them so the A3
-# preview displays the same positive-proof policy as ranking.
 live._strong_buyer_intent = _positive_buyer_request
 live._has_concrete_scope = _positive_concrete_scope
 live._looks_like_provider_ad = _seller_evidence
 
 
 def _self_test_v3() -> int:
-    _OLD_SELF_TEST()
+    # Isolate inherited v2 tests from v3 monkeypatches. Each layer must prove its
+    # own contract rather than accidentally testing against the next layer's rules.
+    current_provider = live._looks_like_provider_ad
+    current_buyer = live._strong_buyer_intent
+    current_scope = live._has_concrete_scope
+    try:
+        live._looks_like_provider_ad = v2._provider_ad_v2
+        live._strong_buyer_intent = v2._buyer_intent_v2
+        live._has_concrete_scope = v2._concrete_scope_v2
+        _OLD_SELF_TEST()
+    finally:
+        live._looks_like_provider_ad = current_provider
+        live._strong_buyer_intent = current_buyer
+        live._has_concrete_scope = current_scope
 
     corbin = {
         "id": "corbin-service",
