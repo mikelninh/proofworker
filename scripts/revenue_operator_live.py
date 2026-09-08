@@ -3,10 +3,11 @@
 
 This wrapper keeps the proven marketplace API base used by the owner-connected
 agent, while pinning OpenAPI discovery to Dealwork's current API host and adding
-stricter buyer-vs-provider-ad filtering for live bidding.
+strict buyer-vs-provider-ad filtering for live bidding.
 """
 from __future__ import annotations
 
+import json
 import re
 
 import revenue_operator as ro
@@ -14,9 +15,6 @@ import revenue_operator as ro
 CURRENT_OPENAPI_URL = "https://api.dealwork.ai/openapi.json"
 
 
-# Dealwork's current public API docs expose OpenAPI on api.dealwork.ai.
-# Keep normal marketplace traffic on the already-proven base URL, but do not
-# derive the schema host from it.
 def _current_openapi_url(_base_url: str) -> str:
     return CURRENT_OPENAPI_URL
 
@@ -27,34 +25,61 @@ ro.derive_openapi_url = _current_openapi_url
 _ORIGINAL_SCORE_JOB = ro.score_job
 _ORIGINAL_BID_PAYLOAD = ro.bid_payload_from_schema
 _ORIGINAL_SELF_TEST = ro.self_test
+_ORIGINAL_SUBMIT_BID = ro.submit_bid
 
 
 _GENERIC_SERVICE_TERMS = (
     "research", "writing", "data", "admin", "code review", "technical writing",
     "data analysis", "automation", "api integration", "full-stack",
     "security testing", "web scraping", "content writing", "python dev",
-    "bug fixes", "bilingual", "development service", "assistant",
+    "bug fixes", "bilingual", "development service", "assistant", "p&l analysis",
+    "lead generation", "api documentation", "structured report", "security audit",
 )
 
 _AGENT_BRANDS = (
     "agent —", "agent -", "assistant —", "assistant -", "grok", "hermesworkagent",
     "birbus", "arena-solver", "marvis", "zapia", "solo dev agent", "cherry —",
-    "barney —", "hermes-co",
+    "barney —", "hermes-co", "deepseek-agent", "solene —",
 )
 
-_BUYER_ACTION_TERMS = (
-    "fix ", "fix:", "implement ", "add ", "update ", "migrate ", "debug ",
-    "investigate ", "review this", "audit this", "analyze this", "analyse this",
-    "build ", "create ", "write ", "document this", "convert ", "clean ",
-    "need ", "looking for", "help me", "for my ", "our ",
+_STRONG_BUYER_TERMS = (
+    "i need ", "we need ", "need someone", "looking for someone", "looking to hire",
+    "please fix", "please build", "please create", "please review", "please audit",
+    "your task is", "task:", "deliverable:", "deliverables:", "acceptance criteria:",
+    "must deliver", "must include", "should deliver", "required output",
+)
+
+_SPECIFIC_WORK_TERMS = (
+    "attached", "provided file", "provided data", "repository", " repo ", "github",
+    "dataset", " csv", "spreadsheet", "api endpoint", "bug", "issue #", "codebase",
+    "source file", "source data", "existing app", "existing code", "document to",
+    "url to", "this file", "this api", "this repo", "this dataset",
 )
 
 
-def _has_explicit_buyer_scope(job: dict) -> bool:
-    if any(job.get(key) for key in ("acceptanceCriteria", "acceptance_criteria", "deliverables", "requirements")):
-        return True
-    text = " ".join(str(job.get(key, "")) for key in ("title", "description")).lower()
-    return "acceptance criteria" in text or "deliverable" in text or "requirements" in text
+def _text(job: dict) -> str:
+    return " ".join(str(job.get(key, "")) for key in ("title", "description")).lower()
+
+
+def _strong_buyer_intent(job: dict) -> bool:
+    text = _text(job)
+    return any(term in text for term in _STRONG_BUYER_TERMS)
+
+
+def _has_concrete_scope(job: dict) -> bool:
+    text = _text(job)
+    structured = any(
+        job.get(key)
+        for key in ("acceptanceCriteria", "acceptance_criteria", "deliverables", "requirements")
+    )
+    specific_work = any(term in f" {text} " for term in _SPECIFIC_WORK_TERMS)
+    explicit_scope_language = any(
+        phrase in text
+        for phrase in ("acceptance criteria", "deliverable", "requirements", "expected output")
+    )
+    return bool(structured and (specific_work or _strong_buyer_intent(job))) or bool(
+        explicit_scope_language and (_strong_buyer_intent(job) or specific_work)
+    )
 
 
 def _looks_like_provider_ad(job: dict) -> bool:
@@ -73,28 +98,29 @@ def _looks_like_provider_ad(job: dict) -> bool:
             "specialist —", "specialist -", "service —", "service -",
         )
     )
-    buyer_action = any(term in combined for term in _BUYER_ACTION_TERMS)
 
-    # Branded agent/assistant + a menu-like price range is almost always another
-    # worker advertising itself rather than a buyer asking for a concrete output.
-    if agent_brand and price_range_in_title and service_terms >= 1:
-        return True
     if explicit_offer_language and service_terms >= 1:
         return True
-    if price_range_in_title and service_terms >= 3 and not buyer_action:
+    if agent_brand and service_terms >= 1 and not _strong_buyer_intent(job):
         return True
 
-    # Productized generic services such as "P&L Analysis for Solo Operators ($10-$80)"
-    # are treated as marketplace supply unless the description clearly asks for
-    # work on a specific artifact/problem.
-    generic_productized = price_range_in_title and any(
+    # On this marketplace, menu-like titles with a price range repeatedly appear
+    # as supply-side listings. Never auto-bid them unless the body contains a
+    # strong first-person buyer request for a concrete artifact/problem.
+    if price_range_in_title and service_terms >= 1 and not (
+        _strong_buyer_intent(job) and _has_concrete_scope(job)
+    ):
+        return True
+
+    generic_productized = any(
         phrase in title
         for phrase in (
             "for solo operators", "for your niche", "blog posts", "linkedin articles",
             "structured reports", "technical writing", "content writing",
+            "automation service", "research brief", "scraping specialist",
         )
     )
-    if generic_productized and not buyer_action:
+    if generic_productized and not (_strong_buyer_intent(job) and _has_concrete_scope(job)):
         return True
 
     return False
@@ -102,27 +128,32 @@ def _looks_like_provider_ad(job: dict) -> bool:
 
 def _score_job_live(job: dict, distribution: dict | None = None) -> dict:
     result = _ORIGINAL_SCORE_JOB(job, distribution)
+    flags = list(result.get("risk_flags") or [])
+
     if _looks_like_provider_ad(job):
         result["action"] = "SKIP"
-        result["score"] = round(float(result["score"]) - 30.0, 2)
+        result["score"] = round(float(result["score"]) - 35.0, 2)
         result["acceptance_probability_heuristic"] = min(
-            float(result["acceptance_probability_heuristic"]), 0.05
+            float(result["acceptance_probability_heuristic"]), 0.03
         )
         result["expected_net_after_10pct_fee"] = 0.0
         result["ev_per_hour"] = 0.0
-        flags = list(result.get("risk_flags") or [])
         if "provider-advertisement/noise-likely" not in flags:
             flags.append("provider-advertisement/noise-likely")
-        result["risk_flags"] = flags
-    elif not _has_explicit_buyer_scope(job):
-        # A real task can still lack structured criteria, but do not auto-bid it.
+    elif not _strong_buyer_intent(job):
         if result.get("action") == "QUALIFY":
             result["action"] = "REVIEW"
-            result["score"] = round(float(result["score"]) - 8.0, 2)
-            flags = list(result.get("risk_flags") or [])
-            if "acceptance-criteria-not-explicit" not in flags:
-                flags.append("acceptance-criteria-not-explicit")
-            result["risk_flags"] = flags
+            result["score"] = round(float(result["score"]) - 12.0, 2)
+        if "buyer-intent-not-explicit" not in flags:
+            flags.append("buyer-intent-not-explicit")
+    elif not _has_concrete_scope(job):
+        if result.get("action") == "QUALIFY":
+            result["action"] = "REVIEW"
+            result["score"] = round(float(result["score"]) - 10.0, 2)
+        if "acceptance-criteria-not-explicit" not in flags:
+            flags.append("acceptance-criteria-not-explicit")
+
+    result["risk_flags"] = flags
     return result
 
 
@@ -131,7 +162,6 @@ ro.score_job = _score_job_live
 
 def _suggested_bid_live(opportunity: dict) -> float:
     budget = float(opportunity["budget"])
-    # Early-market reputation phase: competitive without racing to the bottom.
     if budget <= 10:
         factor = 1.0
     elif budget <= 30:
@@ -148,14 +178,13 @@ ro.suggested_bid_amount = _suggested_bid_live
 
 def _proposal_live(opportunity: dict) -> str:
     job = opportunity["job"]
-    title = str(job.get("title", ""))
     text = ro.text_blob(job)
 
     if "p&l" in text or "financial operations" in text or "profit" in text:
         core = (
             "I can turn the supplied operating numbers into a reconciled P&L view with revenue, costs, "
             "margin and key operating ratios checked against the source inputs. I will flag assumptions, "
-            "show the calculations, and return a compact decision-ready summary plus the reconciliation evidence."
+            "show the calculations, and return a compact decision-ready summary plus reconciliation evidence."
         )
     elif "lead generation" in text or "prospect" in text:
         core = (
@@ -202,12 +231,6 @@ ro.proposal_for = _proposal_live
 
 
 def _bid_payload_live(schema: dict, opportunity: dict, credentials: dict) -> tuple[dict, list[str]]:
-    """Extend the conservative schema mapper with deterministic job identity.
-
-    Dealwork's current CreateBid schema requires jobId even though the job UUID is
-    also present in the URL path. This value is not guessed: it is copied from the
-    exact opportunity selected for `/jobs/{id}/bids`.
-    """
     payload, _missing = _ORIGINAL_BID_PAYLOAD(schema, opportunity, credentials)
     props = schema.get("properties", {}) if isinstance(schema, dict) else {}
     required = set(schema.get("required", [])) if isinstance(schema, dict) else set()
@@ -215,8 +238,7 @@ def _bid_payload_live(schema: dict, opportunity: dict, credentials: dict) -> tup
         props = {}
 
     for name in props:
-        key = ro.normalized(str(name))
-        if key == "jobid":
+        if ro.normalized(str(name)) == "jobid":
             payload[str(name)] = str(opportunity["id"])
 
     missing = sorted(str(name) for name in required if name not in payload)
@@ -226,18 +248,60 @@ def _bid_payload_live(schema: dict, opportunity: dict, credentials: dict) -> tup
 ro.bid_payload_from_schema = _bid_payload_live
 
 
+def _print_job_evidence(opportunity: dict) -> None:
+    job = opportunity.get("job", {})
+    print("\nLIVE JOB EVIDENCE")
+    description = str(job.get("description") or "(no description)").strip()
+    print("Description:")
+    print(description[:1800])
+    for key in ("acceptanceCriteria", "acceptance_criteria", "deliverables", "requirements"):
+        value = job.get(key)
+        if value:
+            print(f"{key}:")
+            if isinstance(value, (dict, list)):
+                print(json.dumps(value, indent=2, ensure_ascii=False)[:1800])
+            else:
+                print(str(value)[:1800])
+    print(f"Buyer intent explicit: {_strong_buyer_intent(job)}")
+    print(f"Concrete scope: {_has_concrete_scope(job)}")
+
+
+def _submit_bid_live(base_url: str, opportunity: dict, credentials: dict, *, require_confirmation: bool = True):
+    if opportunity.get("action") == "QUALIFY":
+        _print_job_evidence(opportunity)
+    return _ORIGINAL_SUBMIT_BID(
+        base_url,
+        opportunity,
+        credentials,
+        require_confirmation=require_confirmation,
+    )
+
+
+ro.submit_bid = _submit_bid_live
+
+
 def _self_test_live() -> int:
     _ORIGINAL_SELF_TEST()
 
     provider_job = {
         "id": "provider-1",
-        "title": "Zapia AI Assistant — Research, Writing, Data & Admin ($10-$80)",
-        "description": "Research and admin deliverables available with clear requirements.",
+        "title": "Financial Operations & P&L Analysis for Solo Operators ($10-$80)",
+        "description": "A productized financial analysis service for founders and solo operators.",
         "fixedPrice": "80",
-        "requirements": ["research", "writing"],
+        "requirements": ["revenue", "costs", "margin"],
     }
     provider_result = _score_job_live(provider_job, None)
     assert provider_result["action"] == "SKIP", provider_result
+
+    real_buyer_job = {
+        "id": "buyer-1",
+        "title": "Fix pagination bug in my API",
+        "description": "I need someone to fix this API bug in the provided repository. Acceptance criteria: tests pass and invalid pages return 400.",
+        "fixedPrice": "30",
+        "acceptanceCriteria": ["tests pass", "invalid pages return 400"],
+    }
+    buyer_result = _score_job_live(real_buyer_job, {"data": {"count": 1}})
+    assert buyer_result["action"] == "QUALIFY", buyer_result
 
     schema = {
         "type": "object",
@@ -255,7 +319,7 @@ def _self_test_live() -> int:
         "estimated_hours": 1.25,
         "action": "QUALIFY",
         "risk_flags": [],
-        "job": {"title": "Fix API pagination bug", "description": "Fix and add tests"},
+        "job": {"title": "Fix API pagination bug", "description": "I need someone to fix this bug in the provided repository."},
     }
     payload, missing = _bid_payload_live(schema, opportunity, {"agentAccountId": "agent-1"})
     assert payload["jobId"] == "job-123", payload
