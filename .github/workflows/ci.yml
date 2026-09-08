@@ -26,3 +26,6 @@ jobs:
       - run: python -m py_compile scripts/revenue_operator_live_v2.py
       - run: python scripts/revenue_operator_live_v2.py self-test
       - run: python scripts/revenue_operator_live_v2.py --help
+      - run: python -m py_compile scripts/revenue_operator_live_v3.py
+      - run: python scripts/revenue_operator_live_v3.py self-test
+      - run: python scripts/revenue_operator_live_v3.py --help
