@@ -5,6 +5,10 @@ Default-deny live bidding: a Dealwork post may QUALIFY only when there is
 positive evidence of buyer intent for a concrete task. Structured acceptance
 criteria alone are not buyer evidence because supply-side service ads may carry
 them too.
+
+The live bid payload also carries Dealwork runtime aliases observed from the
+current validator. This keeps bidding fail-safe when the published OpenAPI
+schema temporarily lags the runtime request contract.
 """
 from __future__ import annotations
 
@@ -17,6 +21,8 @@ ro = live.ro
 
 _OLD_SELF_TEST = ro.self_test
 _OLD_SCORE = ro.score_job
+_OLD_BID_PAYLOAD = ro.bid_payload_from_schema
+_OLD_PROPOSAL = ro.proposal_for
 
 
 _SELLER_MARKERS = (
@@ -196,21 +202,71 @@ live._has_concrete_scope = _positive_concrete_scope
 live._looks_like_provider_ad = _seller_evidence
 
 
+def _proposal_v3(opportunity: dict) -> str:
+    text = _combined(opportunity.get("job", {}))
+    if "vitest" in text or "unit tests" in text or "unit test" in text:
+        return (
+            "I’ll first inspect the function contract, imports, and existing test setup; then I’ll add a focused Vitest "
+            "suite covering normal behavior, boundaries, and error paths with at least 5 cases. I’ll run the suite, fix "
+            "test-only issues within scope, and attach a concise ProofWorker evidence check showing the requested criteria "
+            "and the final test result. If the supplied function or runtime assumptions are incomplete, I’ll flag that "
+            "explicitly rather than invent behavior."
+        )
+    return _OLD_PROPOSAL(opportunity)
+
+
+ro.proposal_for = _proposal_v3
+
+
+def _bid_payload_v3(schema: dict, opportunity: dict, credentials: dict) -> tuple[dict, list[str]]:
+    """Map both published-schema fields and current runtime aliases.
+
+    On 2026-09-08 the live Dealwork validator required `proposedAmount` and
+    `proposalText` even though the fetched OpenAPI request schema exposed
+    `amount` and `message`. These aliases are deterministic equivalents of the
+    already-approved bid amount/proposal, so adding them does not broaden scope.
+    """
+    payload, missing = _OLD_BID_PAYLOAD(schema, opportunity, credentials)
+    amount = float(ro.suggested_bid_amount(opportunity))
+    proposal = _proposal_v3(opportunity)
+
+    # Keep the path/body job identity explicit and identical.
+    payload["jobId"] = str(opportunity["id"])
+    # Runtime validator currently expects decimal text rather than a JSON number.
+    payload["proposedAmount"] = f"{amount:.2f}"
+    payload["proposalText"] = proposal
+
+    # Re-evaluate only requirements from the fetched schema; the runtime aliases
+    # above are intentionally additional compatibility fields.
+    required = set(schema.get("required", [])) if isinstance(schema, dict) else set()
+    missing = sorted(str(name) for name in required if name not in payload)
+    return payload, missing
+
+
+ro.bid_payload_from_schema = _bid_payload_v3
+
+
 def _self_test_v3() -> int:
     # Isolate inherited v2 tests from v3 monkeypatches. Each layer must prove its
     # own contract rather than accidentally testing against the next layer's rules.
     current_provider = live._looks_like_provider_ad
     current_buyer = live._strong_buyer_intent
     current_scope = live._has_concrete_scope
+    current_proposal = ro.proposal_for
+    current_payload = ro.bid_payload_from_schema
     try:
         live._looks_like_provider_ad = v2._provider_ad_v2
         live._strong_buyer_intent = v2._buyer_intent_v2
         live._has_concrete_scope = v2._concrete_scope_v2
+        ro.proposal_for = _OLD_PROPOSAL
+        ro.bid_payload_from_schema = _OLD_BID_PAYLOAD
         _OLD_SELF_TEST()
     finally:
         live._looks_like_provider_ad = current_provider
         live._strong_buyer_intent = current_buyer
         live._has_concrete_scope = current_scope
+        ro.proposal_for = current_proposal
+        ro.bid_payload_from_schema = current_payload
 
     corbin = {
         "id": "corbin-service",
@@ -256,6 +312,39 @@ def _self_test_v3() -> int:
     }
     tiny_result = ro.score_job(tiny, None)
     assert tiny_result["action"] == "REVIEW", tiny_result
+
+    # Reproduce the exact schema/runtime drift observed live: fetched OpenAPI
+    # advertises amount/message, while the runtime requires proposedAmount and
+    # proposalText. The compatibility mapper must include both sets safely.
+    stale_schema = {
+        "type": "object",
+        "required": ["jobId", "amount", "message"],
+        "properties": {
+            "jobId": {"type": "string"},
+            "amount": {"type": "string"},
+            "message": {"type": "string"},
+        },
+    }
+    unit_test_opportunity = {
+        "id": "job-vitest-1",
+        "title": "Write unit tests for a JavaScript function",
+        "budget": 5.0,
+        "estimated_hours": 2.0,
+        "action": "QUALIFY",
+        "risk_flags": ["sandbox-before-untrusted-exec"],
+        "job": {
+            "title": "Write unit tests for a JavaScript function",
+            "description": "Given a JavaScript/TypeScript function, write comprehensive unit tests using Vitest.",
+        },
+    }
+    bid_payload, missing = _bid_payload_v3(stale_schema, unit_test_opportunity, {"agentAccountId": "agent-1"})
+    assert not missing, missing
+    assert bid_payload["jobId"] == "job-vitest-1"
+    assert bid_payload["proposedAmount"] == "5.00"
+    assert isinstance(bid_payload["proposedAmount"], str)
+    assert "Vitest" in bid_payload["proposalText"]
+    assert bid_payload["amount"] == "5.00"
+    assert bid_payload["message"] == bid_payload["proposalText"]
 
     print("LIVE V3 SELF-TEST PASS")
     return 0
