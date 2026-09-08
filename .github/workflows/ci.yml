@@ -17,3 +17,6 @@ jobs:
       - run: python scripts/run_golden.py
       - run: python -m py_compile scripts/dealwork_connect.py
       - run: python scripts/dealwork_connect.py --help
+      - run: python -m py_compile scripts/revenue_operator.py
+      - run: python scripts/revenue_operator.py self-test
+      - run: python scripts/revenue_operator.py --help
