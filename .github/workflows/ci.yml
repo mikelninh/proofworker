@@ -35,3 +35,6 @@ jobs:
       - run: python -m py_compile scripts/revenue_operator_live_v5.py
       - run: python scripts/revenue_operator_live_v5.py self-test
       - run: python scripts/revenue_operator_live_v5.py --help
+      - run: python -m py_compile scripts/oss_bounty_scout.py
+      - run: python scripts/oss_bounty_scout.py self-test
+      - run: python scripts/oss_bounty_scout.py --help
